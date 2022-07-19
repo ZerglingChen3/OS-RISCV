@@ -10,6 +10,7 @@ void pageLockInit(void);
 
 #define DOWN_ALIGN(x, y) (((u64)(x)) & (~((u64)((y) - 1))))
 #define UP_ALIGN(x, y) (DOWN_ALIGN((x) - 1, (y)) + (y))
+#define PAGE_OFFSET(x) ((x)&(PAGE_SIZE-1))
 
 #define PGSIZE (4096)
 

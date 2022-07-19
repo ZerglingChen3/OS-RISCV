@@ -25,6 +25,7 @@ build: bintoc $(USER_LIB) $(USER_TARGET)
 
 %: Entry.o %.o $(USER_LIB)
 	$(LD) -o $@ $(LDFLAGS) -G 0 -static -n -nostdlib -T ../linkscript/User.ld $^
+	$(OBJDUMP) -D $@ > $@.txt
 	mv $@ $(MOUNT_DIR)
 
 %.b: Entry.o %.o $(USER_LIB)
@@ -42,6 +43,6 @@ clean:
 		do \
 			$(MAKE) --directory=$$d clean; \
 		done
-	rm -rf *.o *~ *.d *.x *.b.txt $(MOUNT_DIR)/* BinaryToC *.b
+	rm -rf *.o *~ *.d *.x *.txt $(MOUNT_DIR)/* BinaryToC *.b
 
 include ../include.mk

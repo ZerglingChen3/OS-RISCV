@@ -185,14 +185,31 @@ void pageout(u64 *pgdir, u64 badAddr) {
     if (badAddr <= PAGE_SIZE) {
         panic("^^^^^^^^^^TOO LOW^^^^^^^^^^^\n");
     }
+    PhysicalPage *page = NULL;
     printf("[Page out]pageout at %lx\n", badAddr);
-    PhysicalPage *page;
     if (pageAlloc(&page) < 0) {
         panic("");
     }
     if (pageInsert(pgdir, badAddr, page2pa(page), 
-        PTE_USER | PTE_READ | PTE_WRITE) < 0) {
+        PTE_USER | PTE_READ | PTE_WRITE | PTE_EXECUTE) < 0) {
         panic("");
+    }
+    Process *p = myproc();
+    u64 pageStart = DOWN_ALIGN(badAddr, PAGE_SIZE);
+    u64 pageFinish = pageStart + PAGE_SIZE;
+    for (ProcessSegmentMap *psm = p->segmentMapHead; psm; psm = psm->next) {
+        u64 start = MAX(psm->va, pageStart);
+        u64 finish = MIN(psm->va + psm->len, pageFinish);
+        if (start < finish) {
+            assert(page != NULL);
+            if (psm->flag == 1) {
+                eread(psm->execFile, 0, page2pa(page) + PAGE_OFFSET(start), psm->fileOffset + start - psm->va, finish - start);
+            } else if (psm->flag == 2) {
+                bzero((void*)page2pa(page) + PAGE_OFFSET(start), finish - start);
+            } else {
+                panic("");
+            }
+        }
     }
 }
 
@@ -280,8 +297,9 @@ int copyout(u64* pagetable, u64 dstva, char* src, u64 len) {
     while (len > 0) {
         va0 = DOWN_ALIGN(dstva, PGSIZE);
         pa0 = vir2phy(pagetable, va0, &cow);
-        if (pa0 == NULL)
-            return -1;
+        if (pa0 == NULL) {
+            pageout(pagetable, va0);
+        }
         if (cow) {
             // printf("COW?\n");
             cowHandler(pagetable, va0);

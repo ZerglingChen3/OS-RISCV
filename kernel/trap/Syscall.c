@@ -213,6 +213,7 @@ void syscallSetBrk() {
 }
 
 void syscallMapMemory() {
+    panic("");
     Trapframe *trapframe = getHartTrapFrame();
     u64 start = trapframe->a0, len = trapframe->a1, perm = trapframe->a2, flags = trapframe->a3;
     //printf("mmap: %lx %lx %lx %lx\n", start, len, perm, flags);
@@ -259,6 +260,7 @@ void syscallMapMemory() {
 }
 
 void syscallUnMapMemory() {
+    panic("");
     Trapframe *trapframe = getHartTrapFrame();
     u64 start = trapframe->a0, len = trapframe->a1, end = start + len;
     start = DOWN_ALIGN(start, 12);

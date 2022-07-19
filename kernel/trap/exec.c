@@ -9,9 +9,24 @@
 #include <Debug.h>
 #include <Trap.h>
 #include <Sysfile.h>
+#include <exec.h>
 #define MAXARG 32  // max exec arguments
 
-static int loadSegment(u64* pagetable, u64 va, u64 segmentSize, struct dirent* de, u32 fileOffset, u32 binSize) {
+ProcessSegmentMap segmentMaps[SEGMENT_MAP_COUNT];
+
+int segmentMapAlloc(ProcessSegmentMap **psm) {
+    for (int i = 0; i < SEGMENT_MAP_COUNT; i++) {
+        if (!segmentMaps[i].used) {
+            segmentMaps[i].used = true;
+            *psm = &segmentMaps[i];
+            return 0;
+        }
+    }
+    panic("");
+    return -1;
+}
+
+/*static int loadSegment(u64* pagetable, u64 va, u64 segmentSize, struct dirent* de, u32 fileOffset, u32 binSize) {
     u64 offset = va - DOWN_ALIGN(va, PAGE_SIZE);
     PhysicalPage* page = NULL;
     u64* entry;
@@ -64,6 +79,11 @@ static int loadSegment(u64* pagetable, u64 va, u64 segmentSize, struct dirent* d
         bzero((void*)page2pa(page), r);
     }
     return 0;
+}*/
+
+void appendSegmentMap(Process *p, ProcessSegmentMap *psm) {
+    psm->next = p->segmentMapHead;
+    p->segmentMapHead = psm;
 }
 
 int exec(char* path, char** argv) {
@@ -83,6 +103,7 @@ int exec(char* path, char** argv) {
     Phdr ph;
     u64 *pagetable = 0;
     Process* p = myproc();
+    p->segmentMapHead = NULL;
     u64* oldpagetable = p->pgdir;
 
     PhysicalPage *page;
@@ -98,7 +119,7 @@ int exec(char* path, char** argv) {
     pageInsert(pagetable, TRAMPOLINE_BASE, (u64)trampoline, 
         PTE_READ | PTE_WRITE | PTE_EXECUTE);
     pageInsert(pagetable, TRAMPOLINE_BASE + PAGE_SIZE, ((u64)trampoline) + PAGE_SIZE, 
-        PTE_READ | PTE_WRITE | PTE_EXECUTE);    
+        PTE_READ | PTE_WRITE | PTE_EXECUTE);
     
     MSG_PRINT("setup");
 
@@ -107,6 +128,7 @@ int exec(char* path, char** argv) {
         return -1;
     }
     elock(de);
+    p->execFile = de;
 
     MSG_PRINT("lock file success");
     // Check ELF header
@@ -130,12 +152,32 @@ int exec(char* path, char** argv) {
             continue;
         if (ph.memsz < ph.filesz)
             goto bad;
-        if (loadSegment(pagetable, ph.vaddr, ph.memsz, de, ph.offset, ph.filesz) < 0)
-            goto bad;
+        ProcessSegmentMap *psm;
+        if (ph.filesz > 0) {
+            if (segmentMapAlloc(&psm) < 0) {
+                return -1;
+            }
+            psm->execFile = de;
+            psm->va = ph.vaddr;
+            psm->fileOffset = ph.offset;
+            psm->len = ph.filesz;
+            psm->flag = 1;
+            appendSegmentMap(p, psm);
+        }
+        if (ph.memsz > ph.filesz) {
+            if (segmentMapAlloc(&psm) < 0) {
+                return -1;
+            }
+            psm->execFile = NULL;
+            psm->va = ph.vaddr + ph.filesz;
+            psm->fileOffset = 0;
+            psm->len = ph.memsz - ph.filesz;
+            psm->flag = 2;
+            appendSegmentMap(p, psm);
+        }
     }
     
     eunlock(de);
-    eput(de);
     de = 0;
 
     p = myproc();
@@ -207,6 +249,7 @@ int exec(char* path, char** argv) {
     p->pgdir = pagetable;
     getHartTrapFrame()->epc = elf.entry;  // initial program counter = main
     getHartTrapFrame()->sp = sp;          // initial stack pointer
+    getHartTrapFrame()->a7 = 255;
 
     //free old pagetable
     pgdirFree(oldpagetable);

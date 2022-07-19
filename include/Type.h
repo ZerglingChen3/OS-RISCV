@@ -26,6 +26,14 @@ typedef __builtin_va_list va_list;
         __a <= __b ? __a : __b; \
     })
 
+#define MAX(_a, _b)             \
+    ({                          \
+        typeof(_a) __a = (_a);  \
+        typeof(_b) __b = (_b);  \
+        __a >= __b ? __a : __b; \
+    })
+
+
 typedef unsigned char uchar;
 typedef unsigned short wchar;
 

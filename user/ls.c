@@ -31,6 +31,7 @@ void ls(char *path){
     }
 
     for (;;) {
+        printf("%s %d\n", __FILE__, __LINE__);
         int nread = getdirent(fd, buf, 1024);
         if (nread == -1)
             printf("getdents error");
@@ -40,6 +41,7 @@ void ls(char *path){
 
         // printf("--------------- nread=%d ---------------\n", nread);
         printf("inode#    file type  d_reclen  d_off   d_name\n");
+        printf("gerovib  %d\n", nread);
         for (long bpos = 0; bpos < nread;) {
             struct linux_dirent64* d = (struct linux_dirent64*)(buf + bpos);
             printf("  %-9d", d->d_ino);
@@ -55,7 +57,9 @@ void ls(char *path){
             printf("%-10d%-8d%-8s\n", d->d_reclen, (int)d->d_off, d->d_name);
             bpos += d->d_reclen;
         }
+        printf("%s %d\n", __FILE__, __LINE__);
     }
+        printf("%s %d\n", __FILE__, __LINE__);
 }
 
 

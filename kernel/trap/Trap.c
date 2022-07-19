@@ -131,9 +131,6 @@ void userTrap() {
         {
         case SCAUSE_ENVIRONMENT_CALL:
             trapframe->epc += 4;
-            if (trapframe->a7 != 63 && trapframe->a7 != 64) {
-                printf("syscall: %d\n", trapframe->a7);
-            }
             if (!syscallVector[trapframe->a7]) {
                 panic("unknown-syscall: %d\n", trapframe->a7);
             }
@@ -151,9 +148,10 @@ void userTrap() {
             }
             break;
         default:
-            trapframeDump(trapframe);
+            pageout(currentProcess[hartId]->pgdir, r_stval());
+            /*trapframeDump(trapframe);
             pageLookup(currentProcess[hartId]->pgdir, r_stval(), &pte);
-            panic("unhandled error %d,  %lx, %lx\n", scause, r_stval(), *pte);
+            panic("unhandled error %d,  %lx, %lx\n", scause, r_stval(), *pte);*/
             break;
         }
     }

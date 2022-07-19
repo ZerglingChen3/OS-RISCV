@@ -8,6 +8,7 @@
 #include <Timer.h>
 #include <file.h>
 #include <Signal.h>
+#include <exec.h>
 
 #define NOFILE 128  //Number of fds that a process can open
 #define LOG_PROCESS_NUM 10
@@ -85,6 +86,7 @@ typedef struct Process {
     enum ProcessState state;
     struct Spinlock lock;
     struct dirent *cwd;           // Current directory
+    struct dirent *execFile;
     struct File *ofile[NOFILE];
     u64 chan;//wait Object
     u64 currentKernelSp;
@@ -93,6 +95,7 @@ typedef struct Process {
     u64 heapBottom;
     SignalSet blocked;
     SignalSet pending;
+    ProcessSegmentMap *segmentMapHead;
 } Process;
 
 LIST_HEAD(ProcessList, Process);

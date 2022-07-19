@@ -156,6 +156,7 @@ int setup(Process *p) {
     p->parentId = 0;
     p->heapBottom = USER_HEAP_BOTTOM;
     p->awakeTime = 0;
+    p->segmentMapHead = NULL;
     p->cwd = &rootFileSystem.root;
 
     r = pageAlloc(&page);
@@ -513,6 +514,14 @@ void processFork(u32 flags, u64 stackVa, u64 parentThreadId, u64 tls, u64 childT
     int hartId = r_hartid();
     int r = processAlloc(&process, currentProcess[hartId]->id);
     process->cwd = myproc()->cwd; //when we fork, we should keep cwd
+    for (ProcessSegmentMap *psm = myproc()->segmentMapHead; psm; psm = psm->next) {
+        ProcessSegmentMap *newPsm;
+        if (segmentMapAlloc(&newPsm) < 0) {
+            panic("");
+        }
+        *newPsm = *psm;
+        appendSegmentMap(process, newPsm);
+    }
     if (r < 0) {
         currentProcess[hartId]->trapframe.a0 = r;
         return;
