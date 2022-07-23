@@ -95,6 +95,10 @@ typedef struct Process {
     SignalSet pending;
     u64 setChildTid;
     u64 clearChildTid;
+    u64 monitoredPc;
+    u32 monitoredInstruction;
+    u8 pcLen;
+    u32 nextInstruction;
 } Process;
 
 LIST_HEAD(ProcessList, Process);

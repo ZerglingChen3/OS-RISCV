@@ -350,6 +350,11 @@ int exec(char* path, char** argv) {
             phdr_addr = elf.phoff - ph.offset + ph.vaddr;
         }
     }
+    if (p->monitoredPc) {
+        u64 pa = vir2phy(pagetable, p->monitoredPc, NULL);
+        bcopy((char*)pa, (char*)&p->monitoredInstruction, p->pcLen);
+        bzero((char*)pa, p->pcLen);
+    }
 
 /* ============= Dynamic Link, find Interpreter Path and load Interpreter =============== */
     int retval = 0;

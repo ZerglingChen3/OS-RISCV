@@ -127,6 +127,7 @@ void userTrap() {
         kernelProcessCpuTimeBegin();
         u64 *pte = NULL;
         u64 pa = -1;
+        Process *p = myproc();
         switch (scause & SCAUSE_EXCEPTION_CODE)
         {
         case SCAUSE_ENVIRONMENT_CALL:
@@ -151,6 +152,17 @@ void userTrap() {
             } else {
                 printf("spec: %lx %lx %lx %lx\n", sepc, pa, *pte, TRAMPOLINE_BASE);
                 panic("unknown");
+            }
+            break;
+        case SCAUSE_ILLEGAL_INSTRUCTION:
+            if (r_stval() == p->monitoredPc) {
+                trapframeDump(trapframe);
+                copyout(p->pgdir, p->monitoredPc, (char*)&p->monitoredInstruction, p->pcLen);
+                u32 tmp = 0;
+                copyin(p->pgdir, (char*)&p->nextInstruction, p->monitoredPc + p->pcLen, 4);
+                copyout(p->pgdir, p->monitoredPc + p->pcLen, (char*)&tmp, 4);
+            } else if (r_stval() == p->monitoredPc + p->pcLen) {
+                copyout(p->pgdir, p->monitoredPc + p->pcLen, (char*)&p->nextInstruction, 4);
             }
             break;
         default:
